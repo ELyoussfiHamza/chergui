@@ -1,0 +1,6 @@
+docs
+.env
+chergui
+.venv
+__pycache__/
+*.ulg
