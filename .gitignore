@@ -1,6 +1,10 @@
-docs
 .env
-chergui
-.venv
+.venv/
 __pycache__/
 *.ulg
+
+# generated
+docs/
+runs/
+ARTICLE.md
+post/

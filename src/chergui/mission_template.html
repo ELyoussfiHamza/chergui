@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chergui Mission Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f7f2ea; --surface:#fffdf9; --surface-2:#f1e9dc; --line:#e5dccd;
+  --ink:#1d1812; --ink-2:#5a5046; --ink-3:#8a7f72;
+  --accent:#b8501c; --accent-soft:#f6e1d2;
+  --truth:#2a78d6; --est:#eb6834; --plan:#1d1812;
+  --good:#0ca30c; --critical:#d03b3b; --good-bg:#e3f4e3; --critical-bg:#fbe5e5;
+  --band:rgba(29,24,18,.07); --band-2:rgba(29,24,18,.13);
+  --shadow:0 1px 2px rgba(40,28,10,.06),0 8px 24px -12px rgba(40,28,10,.12);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#13110e; --surface:#1a1a19; --surface-2:#221f1b; --line:#302b25;
+  --ink:#f0ebe3; --ink-2:#c3b9ab; --ink-3:#8f8577;
+  --accent:#f08a4b; --accent-soft:#3a2416;
+  --truth:#3987e5; --est:#d95926; --plan:#f0ebe3;
+  --good-bg:#132a13; --critical-bg:#361616;
+  --band:rgba(240,235,227,.06); --band-2:rgba(240,235,227,.12);
+  --shadow:none;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#13110e; --surface:#1a1a19; --surface-2:#221f1b; --line:#302b25;
+  --ink:#f0ebe3; --ink-2:#c3b9ab; --ink-3:#8f8577;
+  --accent:#f08a4b; --accent-soft:#3a2416;
+  --truth:#3987e5; --est:#d95926; --plan:#f0ebe3;
+  --good-bg:#132a13; --critical-bg:#361616;
+  --band:rgba(240,235,227,.06); --band-2:rgba(240,235,227,.12);
+  --shadow:none;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.18em;font-size:14px}
+.brand svg{width:22px;height:22px;color:var(--accent)}
+.top-right{display:flex;gap:12px;align-items:center;color:var(--ink-3);font-size:12px}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;font:500 13px Inter,sans-serif;cursor:pointer}
+.hero{padding:28px 0 22px;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end}
+.eyebrow{color:var(--accent);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+h1{font-size:clamp(26px,4vw,40px);line-height:1.12;letter-spacing:-.025em;margin:8px 0 10px;max-width:22ch}
+.conditions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:13px;color:var(--ink-2)}
+.verdict{border-radius:16px;padding:16px 20px;min-width:230px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow)}
+.verdict .big{display:flex;align-items:center;gap:10px;font-size:28px;font-weight:800;letter-spacing:-.01em}
+.verdict .big .ico{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:17px}
+.verdict.pass .ico{background:var(--good)} .verdict.fail .ico{background:var(--critical)}
+.verdict small{color:var(--ink-2);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:8px 0 22px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .label{font-size:12.5px;color:var(--ink-2);font-weight:500}
+.kpi .val{font-size:30px;font-weight:700;letter-spacing:-.02em;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .val span{font-size:15px;font-weight:500;color:var(--ink-3);margin-left:3px}
+.kpi .sub{font-size:12.5px;color:var(--ink-3)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden}
+.card-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;padding:16px 20px 0}
+.card-h h2{font-size:16px;margin:0;letter-spacing:-.01em}
+.card-h p{margin:0;color:var(--ink-3);font-size:13px}
+.card-b{padding:14px 20px 18px}
+.ai{display:grid;grid-template-columns:1.35fr 1fr;gap:26px}
+.ai .headline{font-size:19px;font-weight:650;letter-spacing:-.01em;line-height:1.35;margin:0 0 10px}
+.ai p{margin:0 0 10px;color:var(--ink-2)}
+.ai h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);margin:0 0 8px}
+.ai ul{margin:0 0 16px;padding-left:18px;color:var(--ink-2)} .ai li{margin-bottom:6px}
+.badge{font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 9px}
+#map{height:520px;background:var(--surface-2)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;padding:12px 20px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-2)}
+.sw{display:inline-block;width:22px;height:0;border-top:3px solid;vertical-align:middle;margin-right:7px;border-radius:2px}
+.sw.dash{border-top-style:dashed}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:-1px;margin-right:7px;border:2px solid var(--surface)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.chart-box{position:relative;height:250px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.st{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:13px;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.st.pass{color:var(--good);background:var(--good-bg)} .st.fail{color:var(--critical);background:var(--critical-bg)}
+td .d{color:var(--ink-3);font-size:13px;margin-top:2px}
+.timeline{list-style:none;margin:0;padding:0;max-height:440px;overflow:auto}
+.timeline li{display:grid;grid-template-columns:64px 92px 1fr;gap:10px;padding:7px 4px;border-bottom:1px dashed var(--line);font-size:13.5px;align-items:baseline}
+.timeline .t{color:var(--ink-3);font-variant-numeric:tabular-nums;text-align:right}
+.timeline .k{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)}
+.timeline li.fault{background:var(--accent-soft);border-radius:8px;border-bottom-color:transparent}
+.timeline li.fault .k{color:var(--accent)}
+footer{color:var(--ink-3);font-size:12.5px;padding:10px 0 40px;display:flex;flex-wrap:wrap;gap:18px}
+.tbl-toggle{font-size:12.5px;color:var(--ink-3);background:none;border:0;cursor:pointer;text-decoration:underline;padding:0}
+.leaflet-tooltip.lbl{background:var(--surface);color:var(--ink);border:1px solid var(--line);font:600 12px Inter,sans-serif;box-shadow:var(--shadow);border-radius:8px;padding:4px 8px}
+.leaflet-container{font-family:Inter,sans-serif}
+@media (max-width:900px){
+  .hero{grid-template-columns:1fr}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .ai,.grid2{grid-template-columns:1fr}
+}
+@media (max-width:520px){
+  .wrap{padding:0 16px}
+  #runid{display:none}
+  .kpi .val{font-size:24px}
+  #map{height:380px}
+  .timeline li{grid-template-columns:52px 1fr}
+  .timeline .k{display:none}
+  .card-h,.card-b,.legend{padding-left:14px;padding-right:14px}
+  td,th{padding:9px 6px}
+}
+
+:root{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--s8:#e34948}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#0ca30c;--s7:#9085e9;--s8:#e66767}}
+:root[data-theme="dark"]{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#0ca30c;--s7:#9085e9;--s8:#e66767}
+.intent{font-size:clamp(22px,3.4vw,34px);line-height:1.2;letter-spacing:-.02em;font-weight:700;margin:10px 0 12px;max-width:30ch}
+.intent::before{content:"\201C"}.intent::after{content:"\201D"}
+.outcome{border-radius:16px;padding:16px 20px;min-width:240px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow)}
+.outcome .big{font-size:26px;font-weight:800;letter-spacing:-.01em}
+.outcome.pass .big{color:var(--good)} .outcome.fail .big{color:var(--critical)} .outcome.stop .big{color:var(--accent)}
+.outcome small{display:block;color:var(--ink-2);font-size:13px;margin-top:2px}
+.steps{display:flex;gap:6px;margin-top:10px}
+.steps i{flex:1;height:6px;border-radius:3px;background:var(--line)}
+.steps i.p{background:var(--good)} .steps i.f{background:var(--critical)}
+.test-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.test-grid .k{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);font-weight:600;margin-bottom:4px}
+.test-grid .v{font-size:14px;color:var(--ink-2)}
+.lock{font-size:11.5px;font-weight:600;color:var(--ink-2);background:var(--surface-2);border-radius:999px;padding:2px 9px}
+.mx th.a{text-align:center} .mx td.c{text-align:center}
+.mx .val{display:block;font-size:12.5px;color:var(--ink-3);margin-top:3px;font-variant-numeric:tabular-nums}
+.mx tr.meas td{color:var(--ink-3)}
+.attempts{display:grid;gap:14px}
+.att{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:var(--surface);border-left:5px solid var(--c)}
+.att-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.att-h h3{margin:0;font-size:16px}
+.plan{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.plan .chip.chg{border-color:var(--accent);color:var(--ink);background:var(--accent-soft)}
+.why{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.why h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3)}
+.why p{margin:0;color:var(--ink-2);font-size:14px}
+.att a{color:var(--accent);font-weight:600;font-size:13px;text-decoration:none}
+.att a:hover{text-decoration:underline}
+.legend button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
+.legend button[aria-pressed="false"]{opacity:.4}
+@media (max-width:900px){.test-grid{grid-template-columns:1fr 1fr}.why{grid-template-columns:1fr}}
+@media (max-width:520px){.test-grid{grid-template-columns:1fr}.att{padding:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/></svg>
+      CHERGUI
+    </div>
+    <div class="top-right"><span class="mono" id="runid"></span><button class="btn" id="theme">Theme</button></div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Mission planned by AI · verified in simulation</div>
+      <div class="intent" id="intent"></div>
+      <div class="conditions" id="conditions"></div>
+    </div>
+    <div class="outcome" id="outcome"></div>
+  </section>
+
+  <section class="card" id="debrief-card" hidden>
+    <div class="card-h"><h2>Debrief</h2><span class="badge">AI-written · verdicts come from the rules</span></div>
+    <div class="card-b ai" id="debrief"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><h2>The test</h2><span class="lock">Locked before the first flight · the AI cannot change it</span></div>
+    <div class="card-b test-grid" id="test"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><h2>Every attempt, where it really flew</h2><p>Ground truth from the simulator · satellite view</p></div>
+    <div class="card-b" style="padding:12px 0 0"><div id="map"></div></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><h2>Rules across attempts</h2><p>Fixed rules, judged from each flight log</p></div>
+    <div class="card-b" style="overflow-x:auto"><table class="mx" id="matrix"></table></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><h2>How the plan evolved</h2><p>What the AI saw, what it changed</p></div>
+    <div class="card-b attempts" id="attempts"></div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const D = /*__DATA__*/null;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = (v, d=1) => v == null ? "–" : Number(v).toFixed(d);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const col = n => `var(--s${((n - 1) % 8) + 1})`;
+const T = D.test, A = D.attempts, O = D.outcome || {status: "running"};
+
+// ---------- hero ----------
+$("#runid").textContent = D.created;
+$("#intent").textContent = T.intent || T.description;
+const env = T.environment || {}, wind = env.wind || {};
+const chips = [D.place.name, `${fmt(env.air_temp_c, 0)} °C`, `Wind ${fmt(wind.speed_ms, 0)} m/s from ${fmt(wind.from_deg, 0)}°`];
+(T.faults || []).forEach(f => chips.push(f.type === "gust" ? `Gust ${fmt(f.speed_ms, 0)} m/s` : `GNSS loss ${fmt(f.duration_s, 0)} s`));
+$("#conditions").innerHTML = chips.map(c => `<span class="chip">${esc(c)}</span>`).join("");
+const oc = {passed: ["pass", "PASSED", `on attempt ${O.attempt} of ${A.length}`],
+            budget_spent: ["fail", "NOT PASSED", `run budget of ${O.budget} flights spent`],
+            gave_up: ["stop", "STOPPED", "the planner found nothing more it may change"],
+            running: ["stop", "IN PROGRESS", `${A.length} flight(s) so far`]}[O.status];
+$("#outcome").className = "outcome " + oc[0];
+$("#outcome").innerHTML = `<div class="big">${oc[1]}</div><small>${esc(oc[2])}</small>
+  <div class="steps" aria-hidden="true">${A.map(a => `<i class="${a.passed ? "p" : "f"}"></i>`).join("")}</div>`;
+
+// ---------- debrief ----------
+if (D.debrief) {
+  $("#debrief-card").hidden = false;
+  $("#debrief").innerHTML = `<div><p class="headline">${esc(D.debrief.headline)}</p><p>${esc(D.debrief.story)}</p></div>
+    <div><h3>Lessons</h3><ul>${(D.debrief.lessons || []).map(l => `<li>${esc(l)}</li>`).join("")}</ul></div>`;
+}
+
+// ---------- test ----------
+const task = T.task;
+const taskTxt = task.type === "survey"
+  ? `Survey a ${fmt(task.area_size_m[0], 0)} × ${fmt(task.area_size_m[1], 0)} m area, ${fmt(task.area_center_ne_m[0], 0)} m N / ${fmt(task.area_center_ne_m[1], 0)} m E of launch`
+  : `Deliver to ${fmt(task.target_ne_m[0], 0)} m N / ${fmt(task.target_ne_m[1], 0)} m E of launch and return`;
+const when = f => f.at_progress != null ? `at ${Math.round(f.at_progress * 100)}% of the route` : f.at_s != null ? `at t=${f.at_s} s` : `after waypoint ${f.at_waypoint}`;
+const faultTxt = (T.faults || []).map(f => (f.type === "gust" ? `Gust ${f.speed_ms} m/s from ${f.from_deg ?? 90}° for ${f.duration_s} s` : `GNSS blackout ${f.duration_s} s`) + `, ${when(f)}`);
+const ruleName = k => k.replace(/^(max|min)_/, "").replace(/_(m|s|ms|pct)$/, "").replace(/_/g, " ");
+const rules = Object.entries(T.criteria).filter(([, v]) => v !== null).map(([k, v]) => `${ruleName(k)}: ${v === false ? "not allowed" : v}`);
+$("#test").innerHTML = [["Purpose", esc(T.description)], ["Task", esc(taskTxt)],
+  ["Faults", faultTxt.map(esc).join("<br>") || "none"], ["Rules", rules.map(esc).join("<br>")]]
+  .map(([k, v]) => `<div><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+
+// ---------- map ----------
+const map = L.map("map", { scrollWheelZoom: false, zoomSnap: .25 });
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+  maxZoom: 20, maxNativeZoom: 18, attribution: "Imagery © Esri, Maxar, Earthstar Geographics" }).addTo(map);
+const bounds = L.latLngBounds([[D.place.lat, D.place.lon]]);
+if (D.area_latlon) {
+  L.polygon(D.area_latlon, { color: "#ffffff", weight: 2, dashArray: "6 6", fillColor: "#ffffff", fillOpacity: .12 })
+    .bindTooltip("Search area", { className: "lbl" }).addTo(map);
+  D.area_latlon.forEach(p => bounds.extend(p));
+}
+if (D.target_latlon) {
+  L.circleMarker(D.target_latlon, { radius: 9, color: "#fff", weight: 3, fillColor: "#1d1812", fillOpacity: 1 })
+    .bindTooltip("Drop point", { className: "lbl", permanent: true, direction: "right" }).addTo(map);
+  bounds.extend(D.target_latlon);
+}
+const layers = {};
+A.forEach(a => {
+  const c = css(`--s${((a.n - 1) % 8) + 1}`);
+  const g = L.layerGroup().addTo(map);
+  L.polyline(a.truth_latlon, { color: "#ffffff", weight: 6, opacity: .8 }).addTo(g);
+  L.polyline(a.truth_latlon, { color: c, weight: 3 }).bindTooltip(`Attempt ${a.n} · ${a.passed ? "PASS" : "FAIL"}`, { className: "lbl", sticky: true }).addTo(g);
+  (a.metrics.touchdowns || []).slice(0, -1).forEach(t => L.circleMarker([t.lat, t.lon], { radius: 7, color: "#fff", weight: 2.5, fillColor: c, fillOpacity: 1 })
+    .bindTooltip(`Attempt ${a.n}: touchdown ${fmt(t.dist_from_home_m, 0)} m from launch at ${fmt(t.speed_ms)} m/s`, { className: "lbl" }).addTo(g));
+  a.truth_latlon.forEach(p => bounds.extend(p));
+  layers[a.n] = g;
+});
+L.circleMarker([D.place.lat, D.place.lon], { radius: 8, color: "#fff", weight: 3, fillColor: "#1d1812", fillOpacity: 1 })
+  .bindTooltip("Launch", { className: "lbl", permanent: true, direction: "left" }).addTo(map);
+map.fitBounds(bounds.pad(.12));
+$("#legend").innerHTML = A.map(a => `<button aria-pressed="true" data-n="${a.n}"><i class="sw" style="border-color:${col(a.n)}"></i>Attempt ${a.n} · ${a.passed ? "PASS" : "FAIL"}</button>`).join("")
+  + `<span><i class="dot" style="background:var(--ink-3)"></i>Touchdown before the end of the flight</span><span style="margin-left:auto;color:var(--ink-3)">Click an attempt to hide or show it</span>`;
+document.querySelectorAll("#legend button").forEach(b => b.onclick = () => {
+  const on = b.getAttribute("aria-pressed") !== "true";
+  b.setAttribute("aria-pressed", on);
+  on ? layers[b.dataset.n].addTo(map) : map.removeLayer(layers[b.dataset.n]);
+});
+
+// ---------- rules x attempts ----------
+const names = [...new Set(A.flatMap(a => a.verdicts.map(v => v.check)))];
+const head = `<tr><th>Rule</th>${A.map(a => `<th class="a"><i class="sw" style="border-color:${col(a.n)};width:14px"></i>Attempt ${a.n}</th>`).join("")}</tr>`;
+const rows = names.map(nm => `<tr><td>${esc(nm)}</td>${A.map(a => {
+  const v = a.verdicts.find(x => x.check === nm);
+  if (!v) return `<td class="c">–</td>`;
+  return `<td class="c"><span class="st ${v.passed ? "pass" : "fail"}">${v.passed ? "PASS" : "FAIL"}</span><span class="val">${fmt(v.value)} ${esc(v.unit)} / ${fmt(v.limit)}</span></td>`;
+}).join("")}</tr>`).join("");
+const meas = [["Belief vs reality, largest gap", "max_estimate_error_m", "m"], ["Height estimate lost while flying", "height_estimate_lost_s", "s"]]
+  .map(([lbl, k, u]) => `<tr class="meas"><td>${lbl} <span class="lock">measured</span></td>${A.map(a => `<td class="c num">${fmt(a.metrics[k])} ${u}</td>`).join("")}</tr>`).join("");
+$("#matrix").innerHTML = head + rows + meas;
+
+// ---------- attempts ----------
+const PX = {EKF2_HGT_REF: v => `Height source: ${v == 0 ? "barometer" : "GNSS"}`, EKF2_NOAID_TOUT: v => `Dead-reckoning limit ${fmt(v / 1e6)} s`,
+            COM_POS_FS_EPH: v => `Position failsafe at ${v} m uncertainty`, COM_FAIL_ACT_T: v => `Failsafe hold ${v} s`, MPC_LAND_SPEED: v => `Landing ${v} m/s`};
+const planChips = (p, prev) => {
+  const out = [];
+  const add = (key, txt) => out.push(`<span class="chip${prev && JSON.stringify(key(prev)) !== JSON.stringify(key(p)) ? " chg" : ""}">${esc(txt)}</span>`);
+  add(x => x.altitude_m, `${fmt(p.altitude_m, 0)} m altitude`);
+  add(x => x.speed_ms, `${fmt(p.speed_ms, 0)} m/s`);
+  if (p.line_spacing_m != null) add(x => [x.line_spacing_m, x.line_direction], `Passes ${fmt(p.line_spacing_m, 0)} m apart, ${p.line_direction}`);
+  const keys = [...new Set([...Object.keys(p.px4_params || {}), ...Object.keys(prev?.px4_params || {})])];
+  keys.forEach(k => k in (p.px4_params || {})
+    ? add(x => (x.px4_params || {})[k], (PX[k] || (v => `${k}=${v}`))(p.px4_params[k]))
+    : out.push(`<span class="chip chg">${esc(k)} back to default</span>`));
+  if (!keys.length) out.push(`<span class="chip">PX4 defaults</span>`);
+  return out.join("");
+};
+$("#attempts").innerHTML = A.map((a, i) => `<article class="att" style="--c:${col(a.n)}">
+  <div class="att-h"><h3>Attempt ${a.n}</h3><span class="st ${a.passed ? "pass" : "fail"}">${a.passed ? "PASS" : "FAIL"} · ${a.verdicts.filter(v => v.passed).length}/${a.verdicts.length} rules</span></div>
+  <div class="plan">${planChips(a.plan, A[i - 1]?.plan)}</div>
+  <div class="why"><div><h4>${i ? "What the AI saw" : "Risks the AI expected"}</h4><p>${esc(a.diagnosis)}</p></div>
+    <div><h4>${i ? "What it changed" : "Its plan"}</h4><p>${esc(a.changes)}</p></div></div>
+  <p style="margin:12px 0 0"><a href="${esc(a.dir)}/report.html">Open the full flight report for attempt ${a.n}</a></p>
+</article>`).join("");
+
+$("#footer").innerHTML = `<span>Chergui · PX4 SITL + Gazebo Harmonic</span><span>Planner: AI (proposes only) · Verdicts: fixed rules</span><span>${A.length} flight(s)</span>`;
+
+// ---------- theme ----------
+const root = document.documentElement;
+try { const t = localStorage.getItem("chergui-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+$("#theme").onclick = () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("chergui-theme", root.dataset.theme); } catch (e) {}
+  location.reload();
+};
+</script>
+</body>
+</html>

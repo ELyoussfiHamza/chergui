@@ -1,0 +1,52 @@
+# A medical-supply delivery hop to a desert camp in the dunes of Erg Chebbi, near Merzouga.
+# Late afternoon in summer: 45 °C air, a steady Chergui from the east,
+# one hard gust on the outbound leg, then a GPS blackout mid-route.
+
+name: Merzouga delivery — Chergui gust + GPS blackout
+description: >
+  Delivery loop over the Erg Chebbi dunes in 45 °C heat with a steady easterly Chergui.
+  A 15 m/s gust hits on the outbound leg, then GNSS is lost for 25 s on the
+  last leg of the loop.
+
+location:
+  name: Erg Chebbi, Merzouga
+  lat: 31.1330
+  lon: -3.9790
+  alt_m: 760
+
+vehicle: x500
+drag_area_m2: 0.08  # Cd × frontal area of the x500 frame; used to turn wind speed into force
+
+environment:
+  air_temp_c: 45  # hot air is thinner: less drag per m/s of wind (and less thrust in reality)
+  wind:
+    speed_ms: 6
+    from_deg: 90  # Chergui: easterly
+
+mission:
+  altitude_m: 30
+  speed_ms: 6
+  waypoints_ne_m:  # [north, east] metres from the launch point
+    - [120, 0]
+    - [120, 120]
+    - [0, 120]
+  return_home: true
+
+faults:  # at_waypoint: N = triggers once waypoint N has been reached (so it hits on the next leg)
+  - type: gust
+    at_waypoint: 1
+    delay_s: 4
+    duration_s: 6
+    speed_ms: 15
+    from_deg: 90
+  - type: gps_loss
+    at_waypoint: 2
+    delay_s: 2
+    duration_s: 25
+
+criteria:
+  max_estimate_error_m: 15  # how wrong the drone's own position estimate may get
+  max_path_deviation_m: 30  # how far the real drone may stray from the planned route
+  max_landing_distance_m: 10  # final landing spot vs launch point
+  max_flight_time_s: 400
+  allow_uncommanded_takeoff: false

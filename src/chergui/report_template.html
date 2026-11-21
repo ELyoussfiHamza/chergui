@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chergui Flight Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f7f2ea; --surface:#fffdf9; --surface-2:#f1e9dc; --line:#e5dccd;
+  --ink:#1d1812; --ink-2:#5a5046; --ink-3:#8a7f72;
+  --accent:#b8501c; --accent-soft:#f6e1d2;
+  --truth:#2a78d6; --est:#eb6834; --plan:#1d1812;
+  --good:#0ca30c; --critical:#d03b3b; --good-bg:#e3f4e3; --critical-bg:#fbe5e5;
+  --band:rgba(29,24,18,.07); --band-2:rgba(29,24,18,.13);
+  --shadow:0 1px 2px rgba(40,28,10,.06),0 8px 24px -12px rgba(40,28,10,.12);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#13110e; --surface:#1a1a19; --surface-2:#221f1b; --line:#302b25;
+  --ink:#f0ebe3; --ink-2:#c3b9ab; --ink-3:#8f8577;
+  --accent:#f08a4b; --accent-soft:#3a2416;
+  --truth:#3987e5; --est:#d95926; --plan:#f0ebe3;
+  --good-bg:#132a13; --critical-bg:#361616;
+  --band:rgba(240,235,227,.06); --band-2:rgba(240,235,227,.12);
+  --shadow:none;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#13110e; --surface:#1a1a19; --surface-2:#221f1b; --line:#302b25;
+  --ink:#f0ebe3; --ink-2:#c3b9ab; --ink-3:#8f8577;
+  --accent:#f08a4b; --accent-soft:#3a2416;
+  --truth:#3987e5; --est:#d95926; --plan:#f0ebe3;
+  --good-bg:#132a13; --critical-bg:#361616;
+  --band:rgba(240,235,227,.06); --band-2:rgba(240,235,227,.12);
+  --shadow:none;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.18em;font-size:14px}
+.brand svg{width:22px;height:22px;color:var(--accent)}
+.top-right{display:flex;gap:12px;align-items:center;color:var(--ink-3);font-size:12px}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;font:500 13px Inter,sans-serif;cursor:pointer}
+.hero{padding:28px 0 22px;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end}
+.eyebrow{color:var(--accent);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+h1{font-size:clamp(26px,4vw,40px);line-height:1.12;letter-spacing:-.025em;margin:8px 0 10px;max-width:22ch}
+.conditions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:13px;color:var(--ink-2)}
+.verdict{border-radius:16px;padding:16px 20px;min-width:230px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow)}
+.verdict .big{display:flex;align-items:center;gap:10px;font-size:28px;font-weight:800;letter-spacing:-.01em}
+.verdict .big .ico{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:17px}
+.verdict.pass .ico{background:var(--good)} .verdict.fail .ico{background:var(--critical)}
+.verdict small{color:var(--ink-2);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:8px 0 22px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .label{font-size:12.5px;color:var(--ink-2);font-weight:500}
+.kpi .val{font-size:30px;font-weight:700;letter-spacing:-.02em;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .val span{font-size:15px;font-weight:500;color:var(--ink-3);margin-left:3px}
+.kpi .sub{font-size:12.5px;color:var(--ink-3)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden}
+.card-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;padding:16px 20px 0}
+.card-h h2{font-size:16px;margin:0;letter-spacing:-.01em}
+.card-h p{margin:0;color:var(--ink-3);font-size:13px}
+.card-b{padding:14px 20px 18px}
+.ai{display:grid;grid-template-columns:1.35fr 1fr;gap:26px}
+.ai .headline{font-size:19px;font-weight:650;letter-spacing:-.01em;line-height:1.35;margin:0 0 10px}
+.ai p{margin:0 0 10px;color:var(--ink-2)}
+.ai h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);margin:0 0 8px}
+.ai ul{margin:0 0 16px;padding-left:18px;color:var(--ink-2)} .ai li{margin-bottom:6px}
+.badge{font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 9px}
+#map{height:520px;background:var(--surface-2)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;padding:12px 20px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-2)}
+.sw{display:inline-block;width:22px;height:0;border-top:3px solid;vertical-align:middle;margin-right:7px;border-radius:2px}
+.sw.dash{border-top-style:dashed}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:-1px;margin-right:7px;border:2px solid var(--surface)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.chart-box{position:relative;height:250px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.st{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:13px;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.st.pass{color:var(--good);background:var(--good-bg)} .st.fail{color:var(--critical);background:var(--critical-bg)}
+td .d{color:var(--ink-3);font-size:13px;margin-top:2px}
+.timeline{list-style:none;margin:0;padding:0;max-height:440px;overflow:auto}
+.timeline li{display:grid;grid-template-columns:64px 92px 1fr;gap:10px;padding:7px 4px;border-bottom:1px dashed var(--line);font-size:13.5px;align-items:baseline}
+.timeline .t{color:var(--ink-3);font-variant-numeric:tabular-nums;text-align:right}
+.timeline .k{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)}
+.timeline li.fault{background:var(--accent-soft);border-radius:8px;border-bottom-color:transparent}
+.timeline li.fault .k{color:var(--accent)}
+footer{color:var(--ink-3);font-size:12.5px;padding:10px 0 40px;display:flex;flex-wrap:wrap;gap:18px}
+.tbl-toggle{font-size:12.5px;color:var(--ink-3);background:none;border:0;cursor:pointer;text-decoration:underline;padding:0}
+.leaflet-tooltip.lbl{background:var(--surface);color:var(--ink);border:1px solid var(--line);font:600 12px Inter,sans-serif;box-shadow:var(--shadow);border-radius:8px;padding:4px 8px}
+.leaflet-container{font-family:Inter,sans-serif}
+@media (max-width:900px){
+  .hero{grid-template-columns:1fr}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .ai,.grid2{grid-template-columns:1fr}
+}
+@media (max-width:520px){
+  .wrap{padding:0 16px}
+  #runid{display:none}
+  .kpi .val{font-size:24px}
+  #map{height:380px}
+  .timeline li{grid-template-columns:52px 1fr}
+  .timeline .k{display:none}
+  .card-h,.card-b,.legend{padding-left:14px;padding-right:14px}
+  td,th{padding:9px 6px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/></svg>
+      CHERGUI
+    </div>
+    <div class="top-right"><span class="mono" id="runid"></span><button class="btn" id="theme">◐ Theme</button></div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Flight test report</div>
+      <h1 id="title"></h1>
+      <div class="conditions" id="conditions"></div>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </section>
+
+  <section class="kpis" id="kpis"></section>
+
+
+  <section class="card">
+    <div class="card-h"><h2>Flight path over Erg Chebbi</h2><p>Satellite view · real coordinates</p></div>
+    <div class="card-b" style="padding:12px 0 0"><div id="map"></div></div>
+    <div class="legend">
+      <span><i class="sw dash" style="border-color:var(--plan)"></i>Planned route</span>
+      <span><i class="sw" style="border-color:var(--truth)"></i>Where it really flew</span>
+      <span><i class="sw" style="border-color:var(--est)"></i>Where it believed it was</span>
+      <span><i class="dot" style="background:var(--critical)"></i>Touchdown away from launch</span>
+    </div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <div class="card-h"><h2>Belief vs reality</h2><p>Gap between estimate and truth</p></div>
+      <div class="card-b"><div class="chart-box"><canvas id="c-err" aria-label="Estimate error over time"></canvas></div></div>
+    </section>
+    <section class="card">
+      <div class="card-h"><h2>Altitude</h2><p>Height above launch</p></div>
+      <div class="card-b"><div class="chart-box"><canvas id="c-alt" aria-label="Altitude over time"></canvas></div></div>
+    </section>
+    <section class="card">
+      <div class="card-h"><h2>Distance from planned route</h2><p>Real drone, while airborne</p></div>
+      <div class="card-b"><div class="chart-box"><canvas id="c-dev" aria-label="Route deviation over time"></canvas></div></div>
+    </section>
+    <section class="card">
+      <div class="card-h"><h2>Wind on the drone</h2><p id="wind-sub">Chergui + gust</p></div>
+      <div class="card-b"><div class="chart-box"><canvas id="c-wind" aria-label="Wind speed over time"></canvas></div></div>
+    </section>
+  </div>
+
+  <section class="card" id="ai-card" hidden>
+    <div class="card-h"><h2>Incident summary</h2><span class="badge" id="ai-model"></span></div>
+    <div class="card-b ai" id="ai"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><h2>Verdicts</h2><p>Fixed rules from the scenario file. Same log, same verdict.</p></div>
+    <div class="card-b" style="overflow-x:auto"><table id="verdicts"></table></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><h2>Timeline</h2><p>t = seconds since mission start · PX4 messages included</p></div>
+    <div class="card-b"><ul class="timeline" id="timeline"></ul></div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const D = /*__DATA__*/null;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = (v, d=1) => v == null ? "–" : (Math.abs(v) < 0.5 * 10 ** -d ? 0 : Number(v)).toFixed(d);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+// ---------- header ----------
+const sc = D.scenario, M = D.metrics;
+$("#runid").textContent = D.run.dir;
+$("#title").textContent = sc.name;
+$("#conditions").innerHTML = [
+  `📍 ${sc.location.name}`, `🌡 ${sc.air_temp_c} °C`, `💨 ${sc.wind.speed_ms} m/s from ${sc.wind.from_deg}°`,
+  `✈ ${sc.mission.waypoints} waypoints · ${sc.mission.altitude_m} m · ${sc.mission.speed_ms} m/s`,
+].map(t => `<span class="chip">${esc(t)}</span>`).join("");
+const failed = D.verdicts.filter(v => !v.passed).length;
+$("#verdict").className = "verdict " + (D.passed ? "pass" : "fail");
+$("#verdict").innerHTML = `<div class="big"><span class="ico">${D.passed ? "✓" : "✕"}</span>${D.passed ? "PASS" : "FAIL"}</div>
+  <small>${D.passed ? "All " + D.verdicts.length + " checks passed" : failed + " of " + D.verdicts.length + " checks failed"}</small>`;
+
+// ---------- KPIs ----------
+const gps = D.faults.find(f => f.type === "gps_loss"), gust = D.faults.find(f => f.type === "gust");
+const kpis = [
+  ["Worst belief–reality gap", fmt(M.max_estimate_error_m), "m", gps ? "during the " + gps.label : "estimate vs truth"],
+  ["Max off-route", fmt(M.max_deviation_m), "m", gust ? `gust alone: ${fmt(gust.max_deviation_m)} m` : "real drone vs plan"],
+  ["Take-offs", M.takeoffs, "", `PX4 itself counted ${M.px4_detected_takeoffs}`],
+  ["Failsafe reaction", gps && gps.failsafe_after_s != null ? fmt(gps.failsafe_after_s) : "–", "s", "from GNSS loss to failsafe"],
+];
+$("#kpis").innerHTML = kpis.map(([l, v, u, s]) =>
+  `<div class="kpi"><div class="label">${esc(l)}</div><div class="val">${esc(v)}<span>${esc(u)}</span></div><div class="sub">${esc(s)}</div></div>`).join("");
+
+// ---------- AI summary ----------
+if (D.summary) {
+  const S = D.summary;
+  $("#ai-card").hidden = false;
+  $("#ai-model").textContent = "AI-written · " + (S.model || "LLM") + " · verdicts are rule-based";
+  const list = a => (a || []).map(x => `<li>${esc(x)}</li>`).join("");
+  $("#ai").innerHTML = `<div><p class="headline">${esc(S.headline)}</p>${(S.narrative || []).map(p => `<p>${esc(p)}</p>`).join("")}</div>
+    <div><h3>Findings</h3><ul>${list(S.findings)}</ul><h3>Recommendations</h3><ul>${list(S.recommendations)}</ul></div>`;
+}
+
+// ---------- map ----------
+const map = L.map("map", { zoomControl: true, scrollWheelZoom: false });
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+  maxZoom: 19, attribution: "Imagery © Esri, Maxar, Earthstar Geographics",
+}).addTo(map);
+const casing = (pts, color, w = 3, dash) => {
+  L.polyline(pts, { color: "#ffffff", weight: w + 3, opacity: .85, dashArray: dash }).addTo(map);
+  return L.polyline(pts, { color, weight: w, opacity: 1, dashArray: dash }).addTo(map);
+};
+const S = D.series;
+const plan = casing(D.plan_latlon, "#1d1812", 2.5, "7 7");
+casing(S.est_latlon, css("--est"), 2.5);
+const truth = casing(S.truth_latlon, css("--truth"), 3);
+map.fitBounds(L.featureGroup([plan, truth]).getBounds().pad(0.12));
+const pin = (ll, color, label, r = 7) => L.circleMarker(ll, { radius: r, color: "#fff", weight: 2.5, fillColor: color, fillOpacity: 1 })
+  .addTo(map).bindTooltip(label, { permanent: true, direction: "right", offset: [8, 0], className: "lbl" });
+pin(D.plan_latlon[0], "#1d1812", "Launch");
+D.plan_latlon.slice(1, -1).forEach((ll, i) => L.circleMarker(ll, { radius: 5, color: "#fff", weight: 2, fillColor: "#1d1812", fillOpacity: 1 })
+  .addTo(map).bindTooltip(`WP ${i + 1}`, { direction: "top", className: "lbl" }));
+const at = t => { let i = S.t.findIndex(x => x >= t); return S.truth_latlon[i < 0 ? S.truth_latlon.length - 1 : i]; };
+D.faults.forEach(f => pin(at(f.start_s), "#fab219", (f.type === "gust" ? "Gust " : "GNSS lost ") + `t=${fmt(f.start_s, 0)}s`, 6));
+(M.off_site_touchdowns || []).forEach(td => pin([td.lat, td.lon], css("--critical"), `Touched down blind · ${fmt(td.dist_from_home_m, 0)} m from launch`, 8));
+
+// ---------- charts ----------
+Chart.defaults.font.family = "Inter, sans-serif";
+Chart.defaults.font.size = 12;
+const bands = {
+  id: "bands",
+  beforeDatasetsDraw(chart) {
+    const { ctx, chartArea: a, scales: { x } } = chart;
+    ctx.save();
+    D.faults.forEach((f, i) => {
+      const x0 = x.getPixelForValue(f.start_s), x1 = x.getPixelForValue(f.end_s ?? x.max);
+      ctx.fillStyle = f.type === "gps_loss" ? css("--band-2") : css("--band");
+      ctx.fillRect(x0, a.top, Math.max(2, x1 - x0), a.bottom - a.top);
+      ctx.fillStyle = css("--ink-2");
+      ctx.font = "600 11px Inter, sans-serif";
+      ctx.fillText(f.type === "gps_loss" ? "GNSS lost" : "Gust", x0 + 5, a.top + 13);
+    });
+    ctx.restore();
+  },
+};
+const charts = [];
+function lineChart(id, sets, unit, opts = {}) {
+  const ink2 = css("--ink-2"), line = css("--line");
+  const c = new Chart(document.getElementById(id), {
+    type: "line",
+    data: { datasets: sets.map(s => ({
+      label: s.label, data: s.data, borderColor: css(s.color), backgroundColor: css(s.color),
+      borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHoverBorderWidth: 2, pointHoverBorderColor: css("--surface"),
+      borderDash: s.dash, tension: 0.15,
+    })) },
+    options: {
+      maintainAspectRatio: false, animation: false, parsing: false,
+      interaction: { mode: "index", intersect: false },
+      scales: {
+        x: { type: "linear", min: Math.floor(S.t[0]), max: Math.ceil(S.t[S.t.length - 1] / 10) * 10, title: { display: true, text: "t (s)", color: ink2 }, grid: { color: line, drawTicks: false }, ticks: { color: ink2 }, border: { display: false } },
+        y: { beginAtZero: true, title: { display: true, text: unit, color: ink2 }, grid: { color: line, drawTicks: false }, ticks: { color: ink2 }, border: { display: false }, ...opts.y },
+      },
+      plugins: {
+        legend: { display: sets.length > 1, align: "end", labels: { color: ink2, boxWidth: 18, boxHeight: 2, usePointStyle: false } },
+        tooltip: { backgroundColor: css("--surface"), titleColor: css("--ink"), bodyColor: css("--ink-2"), borderColor: line, borderWidth: 1,
+                   padding: 10, callbacks: { title: it => `t = ${fmt(it[0].parsed.x)} s`, label: it => ` ${it.dataset.label}: ${fmt(it.parsed.y)} ${unit}` } },
+      },
+    },
+    plugins: [bands],
+  });
+  charts.push(c);
+}
+const xy = (ys, ts = S.t) => ts.map((t, i) => ({ x: t, y: ys[i] }));
+function drawCharts() {
+  charts.splice(0).forEach(c => c.destroy());
+  lineChart("c-err", [{ label: "Estimate error", data: xy(S.est_err), color: "--est" }], "m");
+  lineChart("c-alt", [{ label: "Real", data: xy(S.truth_alt), color: "--truth" }, { label: "Believed", data: xy(S.est_alt), color: "--est" }], "m");
+  lineChart("c-dev", [{ label: "Off-route", data: xy(S.deviation), color: "--truth" }], "m");
+  lineChart("c-wind", [{ label: "Wind speed", data: D.wind.map(w => ({ x: w.t, y: w.speed })), color: "--truth" }], "m/s");
+}
+drawCharts();
+$("#wind-sub").textContent = `air density ${fmt(D.run.air_density, 3)} kg/m³ at ${sc.air_temp_c} °C`;
+
+// ---------- verdicts ----------
+$("#verdicts").innerHTML = `<tr><th>Check</th><th>Measured</th><th>Limit</th><th>Result</th></tr>` + D.verdicts.map(v =>
+  `<tr><td><b>${esc(v.check)}</b><div class="d">${esc(v.detail)}</div></td>
+   <td class="num">${fmt(v.value, v.unit === "take-offs" ? 0 : 1)} ${esc(v.unit)}</td>
+   <td class="num">${v.unit === "take-offs" ? "≤ 1" : "≤ " + fmt(v.limit, 0) + " " + esc(v.unit)}</td>
+   <td><span class="st ${v.passed ? "pass" : "fail"}">${v.passed ? "✓ Pass" : "✕ Fail"}</span></td></tr>`).join("");
+
+// ---------- timeline ----------
+const kindLabel = { px4: "PX4", fault: "Fault", fault_end: "Fault end", mission: "Mission", mode: "Mode", state: "State", env: "Env", health: "Health", link: "Link", run: "Run" };
+$("#timeline").innerHTML = D.events.filter(e => e.t >= -3).map(e =>
+  `<li class="${e.kind.startsWith("fault") ? "fault" : ""}"><span class="t">${fmt(e.t)}</span><span class="k">${esc(kindLabel[e.kind] || e.kind)}</span><span>${esc(e.text)}</span></li>`).join("");
+
+// ---------- footer ----------
+$("#footer").innerHTML = [
+  `Run time ${fmt(D.run.wall_time_s, 0)} s`, `Sim speed ${D.run.rtf_mean ? Math.round(D.run.rtf_mean * 100) + "% real-time" : "–"}`,
+  `Ground truth from Gazebo · estimate from PX4 EKF2`, `Generated by Chergui`,
+].map(esc).map(s => `<span>${s}</span>`).join("");
+
+// ---------- theme ----------
+const root = document.documentElement;
+try { const t = localStorage.getItem("chergui-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+$("#theme").onclick = () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("chergui-theme", root.dataset.theme); } catch (e) {}
+  drawCharts();
+};
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawCharts);
+</script>
+</body>
+</html>
